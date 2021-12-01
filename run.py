@@ -2,6 +2,8 @@ import csv
 import os
 import sys
 import time
+import argparse
+import random
 
 import numpy as np
 import pandas as pd
@@ -41,6 +43,24 @@ int_to_label = {0: 'stand',
                 11: 'up'}
 
 
+def parse_args():
+    model_names = ["SimpleModel"]
+
+    parser = argparse.ArgumentParser(description='Run training.')
+    parser.add_argument('--seed', '-s', help="Random seed to aid reproducibility", default=0)
+    parser.add_argument('--model', '-m', help="Choose which model to train",
+                        choices=model_names, default=model_names[0])
+    parser.add_argument('--val_split', '-vs', help="Fraction of data to be used in validation set",
+                        default=0.1)
+    parser.add_argument('--batch_size', '-bs', help="Batch size when running training",
+                        default=32)
+    parser.add_argument('--num_epochs', '-ne', help="Number of epochs to train the model",
+                        default=30)
+
+    args = parser.parse_args()
+    return args
+
+
 def load_train_data():
     train_data = pd.read_csv('train.csv')
 
@@ -61,9 +81,16 @@ def load_test_data():
     return torch.tensor(test_features.values).float(), test_ids.values
 
 
-def train(train_dataset, val_split=0.1, batch_size=32, num_epochs=10):
-    model = SimpleModel()
-    model.train()
+def train(train_dataset, args):
+
+    val_split = args.val_split
+    batch_size = args.batch_size
+    num_epochs = args.num_epochs
+
+    model = None
+    if args.model == "SimpleModel":
+        model = SimpleModel()
+        model.train()
 
     run_with_val = val_split > 0
 
@@ -74,7 +101,7 @@ def train(train_dataset, val_split=0.1, batch_size=32, num_epochs=10):
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=5e-4, weight_decay=1e-2)
 
     all_train_losses = []
     all_val_losses = []
@@ -161,12 +188,18 @@ def predict(model, test_dataset, test_ids):
 
 
 def main():
+    args = parse_args()
+
+    torch.manual_seed(int(args.seed))
+    np.random.seed(int(args.seed))
+    random.seed(int(args.seed))
+
     train_features, train_labels = load_train_data()
     print(train_features.shape, train_labels.shape)
 
     train_dataset = TensorDataset(train_features, train_labels)
 
-    trained_model = train(train_dataset, val_split=0.1, num_epochs=1)
+    trained_model = train(train_dataset, args)
 
     test_features, test_ids = load_test_data()
     test_dataset = TensorDataset(test_features)
