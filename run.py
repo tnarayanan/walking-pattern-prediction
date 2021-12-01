@@ -83,9 +83,9 @@ def load_test_data():
 
 def train(train_dataset, args):
 
-    val_split = args.val_split
-    batch_size = args.batch_size
-    num_epochs = args.num_epochs
+    val_split = float(args.val_split)
+    batch_size = int(args.batch_size)
+    num_epochs = int(args.num_epochs)
 
     model = None
     if args.model == "SimpleModel":
